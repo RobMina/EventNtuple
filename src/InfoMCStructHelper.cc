@@ -549,14 +549,22 @@ namespace mu2e {
   }
 
   void InfoMCStructHelper::fillSurfaceStepInfos(KalSeedMC const& kseedmc, SurfaceStepCollection const& surfsteps,std::vector<SurfaceStepInfo>& ssic) {
-    // only look at SurfaceSteps associated with the primary MC truth match particle
-    auto simp = kseedmc.simParticle().simParticle(_spcH);
+    // Keep SurfaceSteps from the same PHYSICAL particle as the matched track. Cosmic
+    // resampling propagates the same muon under DIFFERENT SimParticle ids per stage: the
+    // S1 particle crosses the CRV/concrete and is stopped at the resampling boundary, and
+    // the S2 particle (the one matched to the tracker track) is its continuation, created
+    // as a mu2ePrimary that still carries a parent Ptr back to the S1 particle.
+    // SimParticle::originParticle() is built for exactly this -- it "bridges the gaps
+    // created in staged MC production" by walking back through mu2ePrimary self-parents to
+    // the earliest representation of the physical particle. So two steps belong to the same
+    // physical particle iff their origin particles match. This recovers the S1 CRV/concrete
+    // steps of the muon while excluding its delta-ray secondaries (whose origin is themselves).
+    auto const& simp = kseedmc.simParticle().simParticle(_spcH);
+    auto const originId = simp->originParticle().id();
     for (auto const& ss : surfsteps) {
-      if(ss.simParticle() == simp){
-      //  std::cout << "Found matching surface step sid" << ss << " particle time " << simp->startGlobalTime() << std::endl;
-        ssic.emplace_back(ss); // temporary
+      if(ss.simParticle().isNonnull() && ss.simParticle()->originParticle().id() == originId) {
+        ssic.emplace_back(ss);
       }
-
     }
     //    std::sort(ssic.begin(),ssic.end(),[](const auto& a, const auto& b){return a.time < b.time;});
   }

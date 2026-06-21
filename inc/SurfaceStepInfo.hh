@@ -11,6 +11,9 @@ namespace mu2e {
   struct SurfaceStepInfo {
     int sid=-1; // SurfaceId
     int sindex=-1; // Surface index
+    int simid=-1; // SimParticle id (key) of the particle that made this step. With cosmic
+                  // resampling the same physical muon crosses different surfaces under different
+                  // ids per stage (S1 CRV/concrete vs S2 DS/tracker); these are linked by ancestry.
     float time = 0;  // time the particle enters this component the WRT MC primary proton (ns)
     float edep = 0; // total energy loss through this detector component (MeV)
     float path = 0; // path length take through this detector component (mm)
