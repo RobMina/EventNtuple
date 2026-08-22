@@ -6,12 +6,16 @@
 #define EventNtuple_InfoStructHelper_hh
 #include "Offline/RecoDataProducts/inc/StrawHitIndex.hh"
 #include "Offline/RecoDataProducts/inc/KalSeed.hh"
+#include "Offline/RecoDataProducts/inc/KalSeedDtDt.hh"
 #include "Offline/RecoDataProducts/inc/StrawHitFlag.hh"
 #include "Offline/RecoDataProducts/inc/RecoCount.hh"
 #include "Offline/RecoDataProducts/inc/HelixSeed.hh"
 #include "Offline/RecoDataProducts/inc/TimeCluster.hh"
 #include "Offline/RecoDataProducts/inc/CrvCoincidenceCluster.hh"
 #include "Offline/RecoDataProducts/inc/MVAResult.hh"
+#include "Offline/RecoDataProducts/inc/IntensityInfoCalo.hh"
+#include "Offline/RecoDataProducts/inc/IntensityInfoTimeCluster.hh"
+#include "Offline/RecoDataProducts/inc/IntensityInfoTrackerHits.hh"
 #include "Offline/BFieldGeom/inc/BFieldManager.hh"
 #include "Offline/GeometryService/inc/DetectorSystem.hh"
 #include "Offline/GeometryService/inc/GeomHandle.hh"
@@ -24,6 +28,7 @@
 #include "EventNtuple/inc/LoopHelixInfo.hh"
 #include "EventNtuple/inc/CentralHelixInfo.hh"
 #include "EventNtuple/inc/KinematicLineInfo.hh"
+#include "EventNtuple/inc/TrkDtDtInfo.hh"
 #include "EventNtuple/inc/TrkStrawHitInfo.hh"
 #include "EventNtuple/inc/TrkStrawHitCalibInfo.hh"
 #include "EventNtuple/inc/TrkStrawMatInfo.hh"
@@ -36,6 +41,7 @@
 #include "EventNtuple/inc/CaloHitInfo.hh"
 #include "EventNtuple/inc/CaloRecoDigiInfo.hh"
 #include "EventNtuple/inc/CaloDigiInfo.hh"
+#include "EventNtuple/inc/LumiStreamInfo.hh"
 #include "art/Framework/Principal/Handle.h"
 #include <vector>
 #include <functional>
@@ -67,12 +73,16 @@ namespace mu2e {
     void fillKinematicLineInfo(const KalSeed& kseed, std::vector<std::vector<KinematicLineInfo>>& klis);
     void fillTrkQualInfo(const KalSeed& kseed, MVAResult mva, std::vector<MVAResultInfo>& all_mvas);
     void fillTrkPIDInfo(const KalSeed& kseed, MVAResult mva, std::vector<MVAResultInfo>& all_mvas);
+    void fillTrkDtDtInfo(const KalSeedDtDt& dtdt,std::vector<TrkDtDtInfo>& trkinfo);
     void fillHitInfo(const KalSeed& kseed, std::vector<std::vector<TrkStrawHitInfo>>& all_tshinfos, std::vector<std::vector<TrkStrawHitCalibInfo>>& all_tshcinfos, bool saveCalib );
     void fillMatInfo(const KalSeed& kseed, std::vector<std::vector<TrkStrawMatInfo>>& tminfos );
     void fillTrkCaloHitInfo(const KalSeed& kseed, std::vector<TrkCaloHitInfo>& tchinfo );
     void fillHelixInfo(art::Ptr<HelixSeed> const& hptr, std::vector<HelixInfo>& all_hinfos);
     void fillTimeClusterInfo(TimeCluster const& tc, std::vector<EventNtupleTimeClusterInfo>& infos);
     void fillTimeClusterInfo(art::Ptr<TimeCluster> const& ptr, std::vector<EventNtupleTimeClusterInfo>& infos);
+    void fillLumiStreamInfo(IntensityInfoCalo const& info, LumiStreamInfo& lumi);
+    void fillLumiStreamInfo(IntensityInfoTimeCluster const& info, LumiStreamInfo& lumi);
+    void fillLumiStreamInfo(IntensityInfoTrackerHits const& info, LumiStreamInfo& lumi);
 
     void fillCaloClusterInfo(const CaloCluster& ccptr, std::vector<CaloClusterInfo>& clusterinfos);
     void fillCaloHitInfo(const CaloHit& chptr, std::vector<CaloHitInfo>& hitinfos, int clusterIdx = -1);
