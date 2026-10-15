@@ -79,6 +79,9 @@
 #include "EventNtuple/inc/CaloHitInfoMC.hh"
 #include "EventNtuple/inc/HelixInfo.hh"
 #include "EventNtuple/inc/TimeClusterInfo.hh"
+#include "EventNtuple/inc/TimeClusterInfoMC.hh"
+#include "Offline/RecoDataProducts/inc/ComboHit.hh"
+#include "Offline/MCDataProducts/inc/StrawDigiMC.hh"
 #include "EventNtuple/inc/LumiStreamInfo.hh"
 #include "EventNtuple/inc/LineSeedInfo.hh"
 #include "EventNtuple/inc/InfoStructHelper.hh"
@@ -199,6 +202,9 @@ namespace mu2e {
         fhicl::Atom<bool>              fill {Name("fill") , Comment("Fill time cluster branch")};
         fhicl::Sequence<art::InputTag> tags {Name("tags") ,  Comment("Tags for time cluster collections")};
         fhicl::Sequence<std::string>   names{Name("names"),  Comment("Names for output time cluster collections")};
+        fhicl::Atom<bool>              fillMC{Name("fillMC"), Comment("Also fill <name>mc. branches (needs mc.fill, comboHitTags and strawDigiMCTag)"), false};
+        fhicl::Sequence<art::InputTag> comboHitTags{Name("comboHitTags"), Comment("ComboHit collection each time cluster collection indexes into, one per tag"), std::vector<art::InputTag>()};
+        fhicl::Atom<art::InputTag>     strawDigiMCTag{Name("strawDigiMCTag"), Comment("StrawDigiMC collection for time cluster truth matching"), art::InputTag()};
       };
 
       // ── Line seed config (independent of per-branch track config) ───────
@@ -452,6 +458,7 @@ namespace mu2e {
       // time cluster branches
       std::map<size_t, art::Handle<TimeClusterCollection>> _tcsHandles;
       std::map<size_t, std::vector<EventNtupleTimeClusterInfo>> _tcIs;
+      std::map<size_t, std::vector<TimeClusterInfoMC>> _tcIMCs;   // entry-by-entry with _tcIs
       std::map<size_t, std::string> _tcsNames;
       // line seed branches
       std::map<size_t, art::Handle<CosmicTrackSeedCollection>> _lsHandles;
@@ -552,6 +559,7 @@ namespace mu2e {
       bool fillCaloMC()            const { return _conf.calo().fill() && _conf.calo().mc().fill() && _conf.mc().fill(); }
       bool fillCaloTrackMatchMC()  const { return fillCaloMC() && _conf.calo().mc().fillTrackMatch(); }
       bool fillCaloClsMC()         const { return fillCaloMC() && _conf.calo().mc().fillClusters(); }
+      bool fillTimeClusterMC()     const { return _conf.timeclusters().fill() && _conf.mc().fill() && _conf.timeclusters().fillMC(); }
       bool fillCaloHitsMC()        const { return fillCaloMC() && _conf.calo().mc().fillHits(); }
       bool fillCaloSimMC()         const { return fillCaloMC() && _conf.calo().mc().fillSim(); }
       bool fillCaloDigisMC()       const { return fillCaloMC() && _conf.calo().mc().fillDigis(); }
@@ -598,8 +606,11 @@ namespace mu2e {
       const size_t ntcs = _conf.timeclusters().tags().size();
       if(_conf.timeclusters().names().size() != ntcs)
         throw cet::exception("EventNtuple") << "Time cluster input tags and output names must match in size";
+      if(fillTimeClusterMC() && _conf.timeclusters().comboHitTags().size() != ntcs)
+        throw cet::exception("EventNtuple") << "Time cluster input tags and comboHitTags must match in size";
       for(size_t index = 0; index < ntcs; ++index) { // add collections for each
         _tcIs[index] = std::vector<EventNtupleTimeClusterInfo>();
+        _tcIMCs[index] = std::vector<TimeClusterInfoMC>();
         _tcsHandles[index] = art::Handle<TimeClusterCollection>();
         _tcsNames[index] = _conf.timeclusters().names().at(index) + std::string(".");
       }
@@ -801,6 +812,10 @@ namespace mu2e {
       for(size_t index = 0; index < ntcs; ++index) {
         const std::string& branch_name = _tcsNames[index];
         _ntuple->Branch(branch_name.c_str(),&_tcIs[index],_buffsize,_splitlevel);
+        if(fillTimeClusterMC()){
+          const std::string mc_branch_name = _conf.timeclusters().names().at(index) + std::string("mc.");
+          _ntuple->Branch(mc_branch_name.c_str(),&_tcIMCs[index],_buffsize,_splitlevel);
+        }
       }
     }
 
@@ -1221,10 +1236,19 @@ namespace mu2e {
       const size_t ntcs = _conf.timeclusters().tags().size();
       for(size_t index = 0; index < ntcs; ++index) {
         _tcIs.at(index).clear();
+        _tcIMCs.at(index).clear();
         event.getByLabel(_conf.timeclusters().tags().at(index),_tcsHandles.at(index));
+        // MC truth is optional: only matched when both source collections resolve, so a missing
+        // ComboHit/StrawDigiMC collection leaves <name>mc. empty rather than killing the job
+        art::Handle<ComboHitCollection> chH;
+        art::Handle<StrawDigiMCCollection> sdmcH;
+        bool const domc = fillTimeClusterMC()
+          && event.getByLabel(_conf.timeclusters().comboHitTags().at(index),chH)
+          && event.getByLabel(_conf.timeclusters().strawDigiMCTag(),sdmcH);
         if(_tcsHandles[index].isValid()) {
           for(const auto& tc : *(_tcsHandles[index])) {
             _infoStructHelper.fillTimeClusterInfo(tc, _tcIs.at(index));
+            if(domc) _infoMCStructHelper.fillTimeClusterInfoMC(tc,*chH,*sdmcH,_tcIMCs.at(index));
           }
         }
       }

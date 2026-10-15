@@ -22,7 +22,10 @@
 #include "EventNtuple/inc/MCStepInfo.hh"
 #include "EventNtuple/inc/MCStepSummaryInfo.hh"
 #include "EventNtuple/inc/SurfaceStepInfo.hh"
+#include "EventNtuple/inc/TimeClusterInfoMC.hh"
 #include "EventNtuple/inc/CrvHitInfoMC.hh"
+#include "Offline/RecoDataProducts/inc/TimeCluster.hh"
+#include "Offline/RecoDataProducts/inc/ComboHit.hh"
 #include "Offline/RecoDataProducts/inc/KalSeed.hh"
 #include "Offline/MCDataProducts/inc/KalSeedMC.hh"
 #include "Offline/MCDataProducts/inc/PrimaryParticle.hh"
@@ -80,6 +83,8 @@ namespace mu2e {
                                 std::vector<MCStepInfos>& mcsics, std::vector<MCStepSummaryInfo>& mcssis);
       void fillSurfaceStepInfos(KalSeedMC const& kseedmc, SurfaceStepCollection const& surfsteps,std::vector<SurfaceStepInfo>& ssic);
       void fillStepPointMCInfo(StepPointMCCollection const& mcsteps, MCStepInfos& mcstepinfos);
+      void fillTimeClusterInfoMC(TimeCluster const& tc, ComboHitCollection const& chc,
+                                 StrawDigiMCCollection const& sdmcc, std::vector<TimeClusterInfoMC>& tcimcs);
       void fillSimInfo(const art::Ptr<SimParticle>& sp, SimInfo& siminfo);
       void fillSimInfo(const SimParticle& sp, SimInfo& siminfo);
   };

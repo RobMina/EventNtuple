@@ -557,10 +557,16 @@ namespace mu2e {
   }
 
   void InfoMCStructHelper::fillSurfaceStepInfos(KalSeedMC const& kseedmc, SurfaceStepCollection const& surfsteps,std::vector<SurfaceStepInfo>& ssic) {
-    // only look at SurfaceSteps associated with the primary MC truth match particle
+    // only look at SurfaceSteps associated with the primary MC truth match particle.
+    // Compare by origin-particle identity, not direct Ptr equality: staged cosmic generation
+    // kills and recreates the primary at the S1/S2 resampling boundary under a new SimParticle
+    // key, so a surface crossed in S1 (e.g. CRV top, roof concrete) carries a different raw
+    // simParticle() Ptr than the S2-stage (tracker-matched) primary even though it is the same
+    // physical particle. originParticle() walks the parent() chain to the common root.
     auto simp = kseedmc.simParticle().simParticle(_spcH);
+    auto const& primaryOrigin = simp->originParticle();
     for (auto const& ss : surfsteps) {
-      if(ss.simParticle() == simp){
+      if(ss.simParticle().isNonnull() && ss.simParticle()->originParticle().id() == primaryOrigin.id()){
       //  std::cout << "Found matching surface step sid" << ss << " particle time " << simp->startGlobalTime() << std::endl;
         ssic.emplace_back(ss); // temporary
       }
@@ -587,5 +593,35 @@ namespace mu2e {
       mcstepinfo.stopCode = simParticle->stoppingCode();
       mcstepinfos.emplace_back(mcstepinfo);
     }
+  }
+
+  void InfoMCStructHelper::fillTimeClusterInfoMC(TimeCluster const& tc, ComboHitCollection const& chc,
+      StrawDigiMCCollection const& sdmcc, std::vector<TimeClusterInfoMC>& tcimcs) {
+    // Truth-match a time cluster by majority of its STRAW hits. tc.hits() indexes the ComboHit
+    // collection the cluster was built from, and a ComboHit may combine several straws, so resolve
+    // each down to its straw-level digi indices (fillStrawDigiIndices) and count SimParticles
+    // there -- counting per ComboHit instead would weight a multi-straw hit the same as a single.
+    TimeClusterInfoMC tcimc;
+    std::map<cet::map_vector_key,unsigned> counts;   // SimParticle key -> straw hits contributed
+    art::Ptr<SimParticle> best;
+    ComboHitCollection::SHIV shiv;
+    for(auto chindex : tc.hits()){
+      if(chindex >= chc.size()) continue;            // defensive: stale/mismatched collection
+      shiv.clear();
+      chc.fillStrawDigiIndices(chindex,shiv);
+      for(auto sdindex : shiv){
+        if(sdindex >= sdmcc.size()) continue;
+        auto const& sgs = sdmcc.at(sdindex).earlyStrawGasStep();
+        if(sgs.isNull() || sgs->simParticle().isNull()) continue;
+        auto const& sp = sgs->simParticle();
+        ++tcimc.nsh;
+        auto n = ++counts[sp->id()];
+        if(n > static_cast<unsigned>(tcimc.nsh_prim)){ tcimc.nsh_prim = n; best = sp; }
+      }
+    }
+    tcimc.nsim = counts.size();
+    if(tc.nStrawHits() > 0) tcimc.purity = float(tcimc.nsh_prim)/float(tc.nStrawHits());
+    if(best.isNonnull()) fillSimInfo(best,tcimc.prim);
+    tcimcs.emplace_back(tcimc);
   }
 }

@@ -349,6 +349,11 @@ EventNtupleMaker : {
     fill : false
     tags  : ["MHDe"]
     names : ["timeclusters"]
+    # MC truth for each collection's clusters (<name>mc.), matched via ComboHit -> StrawDigiMC.
+    # Needs mc.fill; give the ComboHit collection each tag's clusters index into, and the StrawDigiMCs.
+    fillMC         : false
+    comboHitTags   : []
+    strawDigiMCTag : ""
   }
   # -- Line seeds ------------------------------------------------------------
   lineseeds : {
